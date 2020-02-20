@@ -1,0 +1,150 @@
+#!/bin/ksh
+###############################################################################
+#
+#  File:        load_mfc_FF_to_azure_blob.sh
+#  Date:        14 Feb 2020
+#  Author:      Krishnan Ravi
+#
+#  Usage:       load_mfc_FF_to_azure_blob.sh
+#               This shell scripts loads the PO and ASN data (received from SAP PI)
+#				to azure blob.
+#
+###############################################################################
+
+step1(){
+	start_step 1 "Move Source File(s) from landing to Source Work directory"
+	
+	step_msg "NULL" "Moving $INTERFACE file(s) from PO Landing Directory"
+	FILECOUNT=`ls ${LND_DIR}/${SRC_FILE_PTRN} | wc -l`
+	step_msg "NULL" "Total File Count - ${FILECOUNT}"
+	if [ ${FILECOUNT} -gt 0 ]; then
+		mv ${LND_DIR}/${SRC_FILE_PTRN} ${SRC_DIR}
+		check_return_code "unable to move $INTERFACE file(s) from Landing Directory."
+	else
+		step_msg "NULL" "No new files avilable in $INTERFACE Landing Directory"
+		run_stat=3		
+	fi
+
+	end_step " ${INTERFACE} Source File(s) has been successfully moved from landing to Source work directory. End of Step 1" 0
+}
+
+#-----------------------Invoking Informatica cloud task-------------------------
+
+step2(){
+	start_step 2 "Invoking MI task - ${MASSINGESTION_NAME}"
+	. /infadata/Scripts/Cloud/MASSINGESTION/invoke_mass_ingestion.sh ${MASSINGESTION_NAME} ${MASSINGESTION_ID}
+	check_return_code "MI Task ${MASSINGESTION_NAME} has failed. Please check the logs for more information."
+	end_step "MI Task ${MASSINGESTION_NAME} has completed successfully. Completed - OK. End Of Step 2" 0
+}
+
+#-------------------------Archive Target File and logs--------------------------
+
+step3(){
+	start_step 3 "Archival of Source Files..."
+	FILECOUNT=`ls ${SRC_DIR}/${SRC_FILE_PTRN} | wc -l`
+	step_msg "NULL" "Total File Count - ${FILECOUNT}"
+	if [ ${FILECOUNT} -gt 0 ]; then
+		for FILENAME in `ls ${SRC_DIR}/${SRC_FILE_PTRN}`
+		do
+			archive_file_stp ${FILENAME} ${BKP_DIR} date zip mv
+			check_return_code "Unable to archive the Source file ${FILENAME}"
+		done
+	else
+		step_msg "NULL" "No Files available in $INTERFACE Source Directory"
+	fi
+	
+	step_msg "NULL" "Delete 07 days old files from ${BKP_DIR} location"
+	find ${BKP_DIR} -iname ${SRC_FILE_PTRN}* -mtime +7 -exec rm -f {} \;
+	check_return_code "Unable to delete old Files from Backup Directory"
+	step_msg "NULL" "$INTERFACE Old files has been deleted successfully from Backup Directory."
+	
+	end_step "Archival of old files compelted Successfully. End of Step 3" 0
+}
+
+#-----------------------JSEQ File Concept ------------
+get_last_run()
+{
+        log_msg "getting the status of last run"
+        if [ -s ${script_seq} ] ;then
+           run_stat=`tail -1 ${script_seq}`
+           log_msg ${run_stat}
+        else
+           log_msg "${script_seq} file not found"
+           log_msg "first time implementation"
+           run_stat=0
+           echo ${run_stat}>${script_seq}
+        fi
+        if [ ${run_stat} -eq 0 ]
+        then
+           increment_step ${run_stat}
+           echo ${run_stat} >${script_seq}
+        fi
+}
+
+increment_step()
+{
+        echo first run_stat=$run_stat
+        run_stat=`expr $1 + 1`
+        echo after run_stat=$run_stat
+        echo ${run_stat} >>${script_seq}
+        if [ $? -eq 0 ] ;then
+           log_msg "Increment run status:${run_stat} to ${script_seq}"
+        else
+           log_msg  "Increment run status:${run_stat} to ${script_seq} failed"
+           log_msg "Analyse the reason for failiure and append run status:${run_stat} to ${script_seq}"
+           exit_proc "Increment run status:${run_stat} to ${script_seq} failed" -1
+        fi
+}
+
+last_step()
+{
+        log_msg "executing the last_step function"
+        echo 0 >>${script_seq}
+        if [ $? -eq 0 ];
+        then
+           log_msg "updated the seq file ${script_seq} with 0"
+        else
+           log_msg "sequence file ${script_seq} not updated with 0"
+           exit_proc "sequence file ${script_seq} not updated with 0" -1
+        fi
+}
+
+###############################################################################
+#
+#				Mainline
+#
+###############################################################################
+
+. /infadata/ParmFiles/Cloud/.infa_cloud_env.sh
+. /infadata/ParmFiles/Cloud/.common_functions.sh
+. /infadata/ParmFiles/Cloud/MFC/.mfc_env.sh
+
+PARM_FILE=/infadata/ParmFiles/Cloud/MFC/.mfc_env.sh
+
+JOB_STEPS=3
+INTERFACE=$1
+LND_DIR=${SRC_DIR}/${INTERFACE}
+SRC_FILE_PTRN=`grep -i -w ${INTERFACE}_FILE_PTRN ${PARM_FILE}  | awk -F= '{print $2}'`
+MASSINGESTION_NAME=`grep -i -w ${INTERFACE}_MASSINGESTION_NAME ${PARM_FILE}  | awk -F= '{print $2}'`
+MASSINGESTION_ID=`grep -i -w ${INTERFACE}_MASSINGESTION_ID ${PARM_FILE}  | awk -F= '{print $2}'`
+
+script_seq=${PARM_DIR}/${MASSINGESTION_NAME}.jseq
+
+get_last_run
+while [ $run_stat -gt 0 ]
+do
+        case $run_stat
+        in
+        1)step1
+          increment_step $run_stat;;
+        2)step2
+          increment_step $run_stat;;
+        3)step3
+          increment_step $run_stat;;
+        4)last_step
+          echo "All the steps have completed Sucessfully"
+esac
+       run_stat=`tail -1 ${script_seq}`
+done
+
+exit_proc "Job Completed Successfully. Existing from Console." 0
