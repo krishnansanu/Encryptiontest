@@ -48,24 +48,37 @@ public class BigDataEnc {
 	        byte[] decryptedText=cipher.doFinal(encryptedText);
 	        System.out.println("Decrypted Text - " + new String(decryptedText).trim());
 
-	        String str="1234567809876543";
+//	        String str="1234567809876543";
+	        String str="ThisIspassphrase";
 	        StringBuffer sb = new StringBuffer();
 	        //Converting string to character array
 	        char ch[] = str.toCharArray();
+	        byte[] keyBytes=new byte[ch.length];
+
 	        for(int i = 0; i < ch.length; i++) {
 	           String hexString = Integer.toHexString(ch[i]);
+//	           System.out.print(hexString);
 	           sb.append(hexString);
+//	           
+	           keyBytes[i]=  hexToByte(hexString);
 	        }
+	        
+	        
+
 	        String result = sb.toString();
-	        byte[] keyByte=result.getBytes();
-	        System.out.println("Automatic" + keyByte.length);
-	        for(byte b:keyByte) {
+//	        byte[] by = Arrays.copyOf(result.getBytes(), 16);
+	        byte[] by=result.getBytes();
+	        System.out.println(result);
+//	        byte[] keyByte=Arrays.copyOf(result.getBytes(),16);
+	        System.out.println("Automatic" + by.length);
+	        for(byte b:by) {
 	        	System.out.print(b);
 	        }
-	        System.out.println();
-	        
+//	        System.out.println();
+//	        
 //	        byte[] keyBytes = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
-	        byte[] keyBytes = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x30, 0x39, 0x38, 0x37, 0x36, 0x35, 0x34, 0x33};
+//	        byte[] keyBytes = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x30, 0x39, 0x38, 0x37, 0x36, 0x35, 0x34, 0x33};
+//	        byte[] keyBytes = {0x54, 0x68, 0x69, 0x73, 0x49, 0x73, 0x41, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65, 0x79};
 	        System.out.println("Manual" + keyBytes.length);
 	        
 	        for(byte b:keyBytes) {
@@ -78,7 +91,7 @@ public class BigDataEnc {
 	        dcipher.init(Cipher.DECRYPT_MODE, sks);
 	        
 	        // read file to byte[]
-	        InputStream is = new FileInputStream("BigFileTest/test.enc");
+	        InputStream is = new FileInputStream("BigFileTest/latest.enc");
 	        ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	        int b;
 	        while ((b = is.read()) != -1) {
@@ -96,4 +109,20 @@ public class BigDataEnc {
 	        e.printStackTrace();
 	    }
 	}
+	
+	public static byte hexToByte(String hexString) {
+	    int firstDigit = toDigit(hexString.charAt(0));
+	    int secondDigit = toDigit(hexString.charAt(1));
+	    return (byte) ((firstDigit << 4) + secondDigit);
+	}
+	 
+	private static int toDigit(char hexChar) {
+	    int digit = Character.digit(hexChar, 16);
+	    if(digit == -1) {
+	        throw new IllegalArgumentException(
+	          "Invalid Hexadecimal Character: "+ hexChar);
+	    }
+	    return digit;
+	}
 }
+ 
