@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="//isilon/homedrive7$/My Documents/EclipseWorkspace/EncryptTest/lib/tink-1.3.0-rc1.jar"/>
+	<classpathentry kind="lib" path="//isilon/homedrive7$/My Documents/EclipseWorkspace/EncryptTest/lib/protobuf-java-3.5.1.jar"/>
+	<classpathentry kind="lib" path="//isilon/homedrive7$/My Documents/EclipseWorkspace/EncryptTest/lib/json-20140107.jar"/>
+	<classpathentry kind="lib" path="lib/commons-io-2.4.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
