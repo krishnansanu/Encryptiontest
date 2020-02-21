@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
@@ -49,65 +50,72 @@ public class BigDataEnc {
 	        System.out.println("Decrypted Text - " + new String(decryptedText).trim());
 
 //	        String str="1234567809876543";
-	        String str="ThisIspassphrase";
-	        StringBuffer sb = new StringBuffer();
-	        //Converting string to character array
-	        char ch[] = str.toCharArray();
-	        byte[] keyBytes=new byte[ch.length];
-
-	        for(int i = 0; i < ch.length; i++) {
-	           String hexString = Integer.toHexString(ch[i]);
-//	           System.out.print(hexString);
-	           sb.append(hexString);
-//	           
-	           keyBytes[i]=  hexToByte(hexString);
-	        }
+	        String str="ThisIspassphrase"; //54686973497370617373706872617365
+//	        StringBuffer sb = new StringBuffer();
 	        
+	        byte[] keyBytes = stringToByte(str);
 	        
 
-	        String result = sb.toString();
+//	        String result = sb.toString();
 //	        byte[] by = Arrays.copyOf(result.getBytes(), 16);
-	        byte[] by=result.getBytes();
-	        System.out.println(result);
+//	        byte[] by=result.getBytes();
+//	        System.out.println(result);
 //	        byte[] keyByte=Arrays.copyOf(result.getBytes(),16);
-	        System.out.println("Automatic" + by.length);
-	        for(byte b:by) {
-	        	System.out.print(b);
-	        }
+//	        System.out.println("Automatic" + by.length);
+//	        for(byte b:by) {
+//	        	System.out.print(b);
+//	        }
 //	        System.out.println();
 //	        
 //	        byte[] keyBytes = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
 //	        byte[] keyBytes = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x30, 0x39, 0x38, 0x37, 0x36, 0x35, 0x34, 0x33};
 //	        byte[] keyBytes = {0x54, 0x68, 0x69, 0x73, 0x49, 0x73, 0x41, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65, 0x79};
-	        System.out.println("Manual" + keyBytes.length);
+//	        System.out.println("Manual" + keyBytes.length);
 	        
-	        for(byte b:keyBytes) {
-	        	System.out.print(b);
-	        }
+//	        for(byte b:keyBytes) {
+//	        	System.out.print(b);
+//	        }
 	        
 	        SecretKeySpec sks = new SecretKeySpec(keyBytes, "AES");
 	        
 	        Cipher dcipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
 	        dcipher.init(Cipher.DECRYPT_MODE, sks);
 	        
-	        // read file to byte[]
-	        InputStream is = new FileInputStream("BigFileTest/latest.enc");
+	        InputStream inputStream = new FileInputStream("BigFileTest/smallchunk.enc");
 	        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-	        int b;
-	        while ((b = is.read()) != -1) {
-	            baos.write(b);
-	        }
-	        byte[] fileBytes = baos.toByteArray();
-//
-	        byte[] decrypted = dcipher.doFinal(fileBytes);
-	        System.out.println(new String(decrypted));
-//	        
+	        IOUtils.copy(inputStream, baos);
+	        byte[] decrypted = dcipher.doFinal(baos.toByteArray());
+	        
+	        
+	        String encData = FileUtils.readFileToString(new File("BigFileTest/smallchunk.enc"));
+	        decrypted = dcipher.doFinal(baos.toByteArray());
+	        
+		    FileWriter writ= new FileWriter(new File("BigFileTest/output.txt"));
+		    writ.write(new String(decrypted));
+		    writ.flush();
+		    writ.close();
 	        
 	        
 
 	    } catch (Exception e) {
 	        e.printStackTrace();
 	    }
+	}
+	
+	public static byte[] stringToByte(String str) {
+		
+//		String result=null;
+        //Converting string to character array
+        char ch[] = str.toCharArray();
+        byte[] keyBytes=new byte[ch.length];
+
+        for(int i = 0; i < ch.length; i++) {
+//           tmp = Integer.toHexString(ch[i]);
+//           result+=tmp;
+           keyBytes[i]=  hexToByte(Integer.toHexString(ch[i]));
+        }
+        
+		return keyBytes;
 	}
 	
 	public static byte hexToByte(String hexString) {
